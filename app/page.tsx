@@ -1,101 +1,191 @@
-import Image from "next/image";
+'use client'
+
+import { useState, useEffect } from 'react'
+import WeatherCard from '@/components/WeatherCard'
+import SearchBar from '@/components/SearchBar'
+import { WeatherData } from '@/types'
+import { motion } from 'framer-motion'
+import { getWeatherBackground } from '@/utils/weatherBackgrounds'
+import { WiThermometer } from "react-icons/wi"
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [weather, setWeather] = useState<WeatherData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(true)
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const handleSearch = async (city: string) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://your-api-domain.com'
+      const res = await fetch(`${apiUrl}/api/weather?city=${encodeURIComponent(city)}`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch weather data')
+      setWeather(data)
+      setIsSearchOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch weather data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleLocationSearch = async (lat: number, lon: number) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(
+        `/api/weather/location?lat=${lat}&lon=${lon}`
+      )
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to fetch weather data')
+      setWeather(data)
+      setIsSearchOpen(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch weather data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, []);
+
+  const background = weather 
+    ? getWeatherBackground(
+        weather.current.icon,
+        weather.current.sunrise,
+        weather.current.sunset
+      )
+    : {
+        backgroundClasses: 'bg-gradient-to-b',
+        gradientColors: 'from-orange-400 via-amber-300 to-yellow-400',
+        weatherEffect: 'sunshine'
+      }; // default sunrise background
+
+  return (
+    <main className="fixed inset-0 bg-black">
+      <div className="h-full flex flex-col">
+        {/* iOS-Optimized Top Bar */}
+        <div className="safe-top bg-transparent px-4 z-10">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-between pt-2"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            {/* Left side - Logo */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center"
+            >
+              {/* Animated Icon */}
+              <motion.div
+                initial={{ rotate: -20 }}
+                animate={{ 
+                  rotate: 0,
+                  scale: [1, 1.1, 1],
+                }}
+                transition={{ 
+                  duration: 1,
+                  repeat: Infinity,
+                  repeatDelay: 5
+                }}
+                className="text-white/90"
+              >
+                <WiThermometer className="w-8 h-8" />
+              </motion.div>
+              
+              {/* App Name with Gradient */}
+              <h1 className="text-xl font-medium ml-1">
+                <span className="bg-clip-text text-transparent bg-gradient-to-r 
+                               from-white to-white/80">
+                  Celsius
+                </span>
+              </h1>
+            </motion.div>
+
+            {/* Optional: Right side - You could add settings or other icons here */}
+            <div className="w-8" /> {/* Spacer for balance */}
+          </motion.div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
-}
+
+        {/* Main Content Area - adjusted top padding */}
+        <div className="flex-1 relative overflow-hidden pt-2">
+          {/* Search Sheet */}
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: isSearchOpen ? 0 : "100%" }}
+            transition={{ type: "spring", damping: 30 }}
+            style={{ 
+              background: 'rgba(22, 22, 23, 0.9)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)'
+            }}
+            className="absolute inset-x-0 top-0 h-full rounded-t-3xl overflow-hidden z-20"
+          >
+            <div className="px-4 pt-8 pb-4 space-y-6">
+              <h2 className="text-2xl font-semibold text-white text-center">
+                Search Location
+              </h2>
+              <SearchBar 
+                onSearch={handleSearch} 
+                onLocationSearch={handleLocationSearch}
+              />
+              {error && (
+                <p className="text-red-500 text-center mt-4">{error}</p>
+              )}
+              {loading && (
+                <div className="flex justify-center mt-4">
+                  <div className="w-6 h-6 border-2 border-white/20 border-t-white/80 
+                               rounded-full animate-spin" />
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {/* Weather Content Sheet */}
+          {weather && (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: isSearchOpen ? "100%" : 0 }}
+              transition={{ type: "spring", damping: 30 }}
+              className={`absolute inset-x-0 top-0 h-full rounded-t-3xl 
+                        overflow-hidden z-10`}
+            >
+              {/* Background Container */}
+              <div className={`absolute inset-0 weather-container
+                            ${background.backgroundClasses} 
+                            ${background.gradientColors}
+                            ${background.weatherEffect}`} />
+              
+              {/* Content */}
+              <div className="relative h-full">
+                {/* Pull Indicator */}
+                <div className="sticky top-0 pt-3 pb-2 z-10">
+                  <div 
+                    className="w-12 h-1 bg-white/20 rounded-full mx-auto cursor-pointer"
+                    onClick={() => setIsSearchOpen(true)}
+                  />
+                </div>
+
+                {/* Weather Content */}
+                <div className="h-full overflow-y-auto">
+                  <div className="px-4 pb-safe">
+                    <WeatherCard weather={weather} />
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </main>
+  )
+} 
